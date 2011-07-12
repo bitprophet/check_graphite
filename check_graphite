@@ -24,23 +24,31 @@ from NagAconda import Plugin
 import urllib2
 
 
+class EmptyData(Exception):
+    pass
+
+
 graphite = Plugin("Plugin to retrieve data from graphite", "1.0")
 graphite.add_option("u", "url", "URL to query for data", required=True)
 
 graphite.enable_status("warning")
 graphite.enable_status("critical")
 graphite.start()
-
-usock = urllib2.urlopen(graphite.options.url)
-data = usock.read()
-usock.close()
-
-pieces = data.split("|")
-counter = pieces[0].split(",")[0]
-values = pieces[1].strip().split(",")
-values = map(float, values)
-avg = sum(values)/len(values);
-graphite.set_value(counter, avg)
-graphite.set_status_message("Avg value of %s was %f" % (counter, avg))
-
-graphite.finish()
+try:
+    usock = urllib2.urlopen(graphite.options.url)
+    data = usock.read()
+    usock.close()
+    if not data:
+        raise EmptyData
+    pieces = data.split("|")
+    counter = pieces[0].split(",")[0]
+    values = pieces[1].strip().split(",")
+    values = map(float, values)
+    avg = sum(values)/len(values);
+    graphite.set_value(counter, avg)
+    graphite.set_status_message("Avg value of %s was %f" % (counter, avg))
+    graphite.finish()
+except EmptyData:
+    graphite.unknown_error("Server returned no data! Double check your metric path?")
+except Exception, e:
+    graphite.unknown_error("Python error: %s" % e)
