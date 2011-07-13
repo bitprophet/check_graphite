@@ -20,35 +20,49 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from NagAconda import Plugin
+
 import urllib2
+
+from NagAconda import Plugin
 
 
 class EmptyData(Exception):
     pass
 
 
+# Initialization
 graphite = Plugin("Plugin to retrieve data from graphite", "1.0")
 graphite.add_option("u", "url", "URL to query for data", required=True)
-
 graphite.enable_status("warning")
 graphite.enable_status("critical")
 graphite.start()
+
 try:
+    # Get data from Graphite URL API
     usock = urllib2.urlopen(graphite.options.url)
     data = usock.read()
     usock.close()
     if not data:
         raise EmptyData
+
+    # Parse "target,start_timestamp,end_timestamp,step|value1,...,valueN"
     pieces = data.split("|")
     counter = pieces[0].split(",")[0]
     values = pieces[1].strip().split(",")
     values = map(float, values)
+
+    # Calculate an average from all values, that's our metric
     avg = sum(values)/len(values);
     graphite.set_value(counter, avg)
+
+    # Report and finish
     graphite.set_status_message("Avg value of %s was %f" % (counter, avg))
     graphite.finish()
+# Handle case where we got None back instead of a float (seems to occur when
+# querying Graphite after time period rolls over but before data has been
+# collected
 except EmptyData:
     graphite.unknown_error("Server returned no data! Double check your metric path?")
+# Handle any other exceptions to correctly return UNKNOWN
 except Exception, e:
     graphite.unknown_error("Python error: %s" % e)
