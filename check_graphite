@@ -58,9 +58,7 @@ try:
     # Report and finish
     graphite.set_status_message("Avg value of %s was %f" % (counter, avg))
     graphite.finish()
-# Handle case where we got None back instead of a float (seems to occur when
-# querying Graphite after time period rolls over but before data has been
-# collected
+# Handle case where we got empty data back -- eg bad metric path / 500 / etc
 except EmptyData:
     graphite.unknown_error("Server returned no data! Double check your metric path?")
 # Handle any other exceptions to correctly return UNKNOWN
