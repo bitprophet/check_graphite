@@ -21,12 +21,15 @@
 # THE SOFTWARE.
 
 
-import urllib, urllib2, urlparse
+import urllib, urllib2, urlparse, math
 
 from NagAconda import Plugin
 
 
 class EmptyData(Exception):
+    pass
+
+class NaNValues(Exception):
     pass
 
 
@@ -73,6 +76,10 @@ try:
     # Parse it into metric name, values
     name, values = parse_data(data)
 
+    # Handle NaNs
+    if any(map(lambda x: isinstance(x, float) and math.isnan(x), values)):
+        raise NaNValues
+
     # Handle situation where we're looking for a single value and it is None.
     # This most often occurs when we queried Graphite between timeperiod
     # rollover and deposit of data.
@@ -95,6 +102,9 @@ try:
 # Handle case where we got empty data back -- eg bad metric path / 500 / etc
 except EmptyData:
     graphite.unknown_error("Server returned no data! Double check your metric path?")
+# Handle NaN values (e.g. ping no-route-to-host)
+except NaNValues:
+    graphite.unknown_error("Server response contained NaNs! Resource may be unavailable or collectd misconfigured.")
 # Handle any other exceptions to correctly return UNKNOWN
 except Exception, e:
     graphite.unknown_error("Python error: %s" % e)
