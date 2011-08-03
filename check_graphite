@@ -77,7 +77,7 @@ try:
     name, values = parse_data(data)
 
     # Handle NaNs
-    if any(map(lambda x: isinstance(x, float) and math.isnan(x), values)):
+    if any(map(lambda x: math.isnan(float(x)), values)):
         raise NaNValues
 
     # Handle situation where we're looking for a single value and it is None.
