@@ -49,14 +49,14 @@ def parse_data(data):
 
 
 def prev_period_url(url):
-        parts = urlparse.urlparse(url)
-        params = dict(urlparse.parse_qsl(parts.query))
-        params['from'] = "-2minutes"
-        params['until'] = "-1minutes"
-        parts = list(parts)
-        parts[4] = urllib.urlencode(params)
-        new_url = urlparse.urlunparse(parts)
-        return new_url
+    parts = urlparse.urlparse(url)
+    params = dict(urlparse.parse_qsl(parts.query))
+    params['from'] = "-2minutes"
+    params['until'] = "-1minutes"
+    parts = list(parts)
+    parts[4] = urllib.urlencode(params)
+    new_url = urlparse.urlunparse(parts)
+    return new_url
 
 
 # Initialization
