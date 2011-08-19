@@ -51,11 +51,12 @@ def parse_data(data):
     return counter, values
 
 
-def prev_period_url(url):
+def prev_period_url(url, start=1):
     parts = urlparse.urlparse(url)
     params = dict(urlparse.parse_qsl(parts.query))
-    params['from'] = "-2minutes"
-    params['until'] = "-1minutes"
+    params['from'] = "-%sminutes" % (start)
+    if start > 1:
+        params['until'] = "-%sminutes" % (start - 1)
     parts = list(parts)
     parts[4] = urllib.urlencode(params)
     new_url = urlparse.urlunparse(parts)
@@ -79,13 +80,16 @@ try:
     # Handle situation where we're looking for a single value and it is None.
     # This most often occurs when we queried Graphite between timeperiod
     # rollover and deposit of data.
-    # It assumes one is querying via eg &from=-1minutes.
-    if len(values) == 1 and values[0] == 'None':
-        # Single retry looking at previous time period instead of requested one
-        # -- which should have its data filled in fine.
-        new_url = prev_period_url(graphite.options.url)
+    # Look backwards until we find data. (This could be dangerous when a metric
+    # has truly stopped being gathered, so we max it out at a given number of
+    # tries.)
+    tries = 1
+    max_tries = 2
+    while len(values) == 1 and values[0] == 'None' and tries <= max_tries:
+        new_url = prev_period_url(graphite.options.url, tries)
         data = get_data(new_url)
         name, values = parse_data(data)
+        tries += 1
     values = map(float, values)
 
     # Handle NaNs
