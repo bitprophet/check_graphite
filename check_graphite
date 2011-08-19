@@ -77,6 +77,14 @@ try:
     # Parse it into metric name, values
     name, values = parse_data(data)
 
+    import datetime
+    def log(txt):
+        with open('/tmp/check_graphite.log', 'a') as fd:
+            fd.write("[%s] %s\n" % (
+                datetime.datetime.now().strftime("%X"),
+                txt
+            ))
+
     # Handle situation where we're looking for a single value and it is None.
     # This most often occurs when we queried Graphite between timeperiod
     # rollover and deposit of data.
@@ -85,10 +93,13 @@ try:
     # tries.)
     tries = 1
     max_tries = 2
+    log("Checked %r, got %r" % (graphite.options.url, values[0]))
     while len(values) == 1 and values[0] == 'None' and tries <= max_tries:
-        new_url = prev_period_url(graphite.options.url, tries)
+        log("Value was None, this is try #%s" % tries)
+        new_url = prev_period_url(graphite.options.url, tries + 1)
         data = get_data(new_url)
         name, values = parse_data(data)
+        log("Rechecked %r (%r), got %r" % (new_url, tries, values[0]))
         tries += 1
     values = map(float, values)
 
